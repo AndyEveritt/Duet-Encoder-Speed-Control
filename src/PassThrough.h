@@ -1,0 +1,40 @@
+#ifndef PASSTHROUGH_H_INCLUDED
+#define PASSTHROUGH_H_INCLUDED
+
+#include "Arduino.h"
+#include "CRC16.h"
+
+// Class to accumulate commands received from PanelDue to be passed through
+class PassThrough
+{
+public:
+  unsigned int Check(HardwareSerial& serial);     // Check for new data, return 0 if no command available, else length of the command
+  const char *GetCommand();                       // Get the command and reset the state
+  
+private:
+  void AddToChecksum(char c);
+  void StoreAndAddToChecksum(char c);             // Store character and add to checksum. If no room, set the overflow flag.
+
+  // Pass through data
+  enum class State : uint8_t
+  {
+    waitingForStart = 0,
+    receivingLineNumber,
+    skippingSpaces,
+    receivingCommand,
+    receivingQuotedString,
+    receivingChecksumOrCrc,
+    haveCommand
+  };
+
+  uint8_t count = 0;
+  uint8_t checksumCharacters;
+  uint8_t computedChecksum;
+  CRC16 computedCrc;
+  uint16_t receivedChecksumOrCrc;
+  State state = State::waitingForStart;
+  bool overflowed;
+  char buffer[100];
+};
+
+#endif
