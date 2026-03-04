@@ -98,6 +98,8 @@ or its series resistor.
 // Configuration constants
 const int PinA = 2;
 const int PinB = 3;
+const int PinA2 = 4;
+const int PinB2 = 5;
 
 #if defined(__AVR_ATmega32U4__) // Arduino Micro, Pro Micro or Leonardo
 const int PinLed = 10;
@@ -115,10 +117,12 @@ const unsigned long MinCommandInterval = 20;
 #include "RotaryEncoder.h"
 
 RotaryEncoder encoder(PinA, PinB, PulsesPerClick);
+RotaryEncoder encoder2(PinA2, PinB2, PulsesPerClick);
 
 int serialBufferSize;
 int distanceMultiplier;
 int speed;
+int speed2;
 uint32_t whenLastCommandSent = 0;
 
 #if defined(__AVR_ATmega32U4__) // Arduino Leonardo or Pro Micro
@@ -131,8 +135,8 @@ GCodeSerial output(UartSerial);
 
 void setup()
 {
-	pinMode(PinA, INPUT_PULLUP);
-	pinMode(PinB, INPUT_PULLUP);
+	encoder.init();
+	encoder2.init();
 	pinMode(PinLed, OUTPUT);
 
 	output.begin(BaudRate);
@@ -160,6 +164,7 @@ void loop()
 	// doesn't let us hook it. We could possibly use interrupts instead, but if the encoder suffers from contact bounce
 	// then that isn't a good idea. In practice this loop executes fast enough that polling it here works well enough
 	encoder.poll();
+	encoder2.poll();
 
 	digitalWrite(PinLed, HIGH);
 
@@ -173,16 +178,29 @@ void loop()
 		if (now - whenLastCommandSent >= MinCommandInterval)
 		{
 			int speedDiff = encoder.getChange();
+			int speedDiff2 = encoder2.getChange();
 			if (speedDiff != 0)
 			{
 #if defined(__AVR_ATmega32U4__) // Arduino Micro, Pro Micro or Leonardo
 				TXLED0;			// turn on transmit LED
 #endif
-				speed = clamp(speed + speedDiff, 0, 1000);
+				speed = clamp(speed + speedDiff, 1, 1000);
 
 				whenLastCommandSent = now;
-				output.write("M220 S");
+				output.write("M596 P0 M220 S");
 				output.print(speed);
+				output.write('\n');
+			}
+			if (speedDiff2 != 0)
+			{
+#if defined(__AVR_ATmega32U4__) // Arduino Micro, Pro Micro or Leonardo
+				TXLED0;			// turn on transmit LED
+#endif
+				speed2 = clamp(speed2 + speedDiff2, 1, 1000);
+
+				whenLastCommandSent = now;
+				output.write("M596 P1 M220 S");
+				output.print(speed2);
 				output.write('\n');
 			}
 		}
