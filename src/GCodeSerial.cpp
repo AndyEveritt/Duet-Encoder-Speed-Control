@@ -49,7 +49,8 @@ size_t GCodeSerial::write(uint8_t c)
       emptyLine = false;        // do this first to avoid infinite recursion
       write('N');               // this recurses so that it updates the checksum
       print(lineNumber);        // this recurses so that it updates the checksum
-    }
+	  write(' ');
+	}
 #if USE_CRC16
     crc.Update(c);
 #else
